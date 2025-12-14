@@ -1,4 +1,5 @@
 <?php
+
 return [
     'nav' => [
         'home' => 'Pagrindinis',
@@ -9,12 +10,14 @@ return [
         'register' => 'Registracija',
         'logout' => 'Atsijungti',
     ],
+
     'auth' => [
         'login' => 'Prisijungti',
         'register' => 'Registruotis',
         'remember' => 'Prisiminti mane',
         'invalid_credentials' => 'Neteisingi prisijungimo duomenys.',
     ],
+
     'fields' => [
         'first_name' => 'Vardas',
         'last_name' => 'Pavardė',
@@ -22,6 +25,7 @@ return [
         'password' => 'Slaptažodis',
         'password_confirm' => 'Pakartoti slaptažodį',
     ],
+
     'flash' => [
         'register_success' => 'Registracija sėkminga.',
         'conference_created' => 'Konferencija sukurta.',
