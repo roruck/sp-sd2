@@ -17,7 +17,7 @@ return [
         'go_client' => 'Client subsystem',
         'go_employee' => 'Employee subsystem',
         'go_admin' => 'Admin subsystem',
-        'note' => 'SD1 demo system (no authentication, no database).',
+        'note' => 'SD2 system (authentication + database).',
     ],
 
     'client' => [
@@ -26,7 +26,7 @@ return [
         'no_conferences' => 'No planned conferences found.',
         'register' => 'Register',
         'register_title' => 'Registration to conference',
-        'register_note' => 'Data is saved in session (no database in SD1).',
+        'register_note' => 'Data is saved in database (SD2).',
     ],
 
     'employee' => [
@@ -45,7 +45,7 @@ return [
         'manage_conferences' => 'Conference management',
         'users_title' => 'System users',
         'user_edit_title' => 'Edit user',
-        'email_readonly' => 'Email is read-only in SD1.',
+        'email_readonly' => 'Email can be edited in SD2.',
         'conferences_title' => 'Conferences',
         'create_conference' => 'Create new conference',
         'conference_create_title' => 'Create conference',
