@@ -1,6 +1,14 @@
 /node_modules
 /vendor
-/public/build
 /storage/*.key
 .env
 .phpunit.result.cache
+database/*.sqlite
+storage/framework/views/*.php
+storage/logs/*.log
+storage/framework/*
+/storage/framework/sessions/
+/storage/framework/cache/
+/storage/framework/views/
+/storage/logs/
+/bootstrap/cache/

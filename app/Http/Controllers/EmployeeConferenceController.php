@@ -2,38 +2,28 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Conference;
+use App\Services\FakeData;
 use Illuminate\Support\Carbon;
 
 class EmployeeConferenceController extends Controller
 {
-    private function toArrayConference(Conference $c): array
+    private function currentUser(): array
     {
-        return [
-            'id' => $c->id,
-            'title' => $c->title,
-            'description' => $c->description,
-            'speakers' => $c->speakers,
-            'date' => optional($c->date)->toDateString() ?? (string) $c->date,
-            'time' => $c->time,
-            'address' => $c->address,
-        ];
+        return ['first_name' => 'Employee', 'last_name' => 'User'];
     }
 
     public function index()
     {
-        $conferences = Conference::query()
-            ->orderBy('date', 'desc')
-            ->get()
-            ->map(fn (Conference $c) => $this->toArrayConference($c))
-            ->values()
-            ->all();
+        $conferences = FakeData::conferences();
+
+        // Employee sees all conferences (past + planned)
+        // Sort by date desc
+        usort($conferences, function ($a, $b) {
+            return strcmp($b['date'], $a['date']);
+        });
 
         return view('employee.conferences.index', [
-            'currentUser' => [
-                'first_name' => auth()->user()->first_name,
-                'last_name' => auth()->user()->last_name,
-            ],
+            'currentUser' => $this->currentUser(),
             'conferences' => $conferences,
             'today' => Carbon::today(),
         ]);
@@ -41,24 +31,15 @@ class EmployeeConferenceController extends Controller
 
     public function show(int $id)
     {
-        $conference = Conference::with(['users.roles'])->findOrFail($id);
+        $conferences = FakeData::conferences();
+        abort_if(!isset($conferences[$id]), 404);
 
-        $clients = $conference->users
-            ->filter(fn ($u) => $u->roles->contains('slug', 'client'))
-            ->map(fn ($u) => [
-                'name' => trim(($u->first_name ?? '') . ' ' . ($u->last_name ?? '')) ?: ($u->name ?? 'Client'),
-                'email' => $u->email,
-            ])
-            ->values()
-            ->all();
+        $registrations = FakeData::registrations();
 
         return view('employee.conferences.show', [
-            'currentUser' => [
-                'first_name' => auth()->user()->first_name,
-                'last_name' => auth()->user()->last_name,
-            ],
-            'conference' => $this->toArrayConference($conference),
-            'registrations' => $clients,
+            'currentUser' => $this->currentUser(),
+            'conference' => $conferences[$id],
+            'registrations' => $registrations[$id] ?? [],
         ]);
     }
 }
