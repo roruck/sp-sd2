@@ -4,77 +4,107 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\ConferenceRequest;
-use App\Models\Conference;
+use App\Services\FakeData;
 use Illuminate\Support\Carbon;
 
 class ConferenceController extends Controller
 {
-    private function toArrayConference(Conference $c): array
+    private function currentUser(): array
     {
-        return [
-            'id' => $c->id,
-            'title' => $c->title,
-            'description' => $c->description,
-            'speakers' => $c->speakers,
-            'date' => optional($c->date)->toDateString() ?? (string) $c->date,
-            'time' => $c->time,
-            'address' => $c->address,
-        ];
+        return ['first_name' => 'Admin', 'last_name' => 'User'];
     }
 
     public function index()
     {
-        $conferences = Conference::query()
-            ->orderBy('date', 'desc')
-            ->get()
-            ->map(fn (Conference $c) => $this->toArrayConference($c))
-            ->values()
-            ->all();
+        $conferences = FakeData::conferences();
 
-        return view('admin.conferences.index', compact('conferences'));
+        // Sort by date desc
+        usort($conferences, function ($a, $b) {
+            return strcmp($b['date'], $a['date']);
+        });
+
+        return view('admin.conferences.index', [
+            'currentUser' => $this->currentUser(),
+            'conferences' => $conferences,
+            'today' => Carbon::today(),
+        ]);
     }
 
     public function create()
     {
-        return view('admin.conferences.create');
+        return view('admin.conferences.create', [
+            'currentUser' => $this->currentUser(),
+            'conference' => [
+                'title' => '',
+                'description' => '',
+                'speakers' => '',
+                'date' => '',
+                'time' => '',
+                'address' => '',
+            ],
+        ]);
     }
 
     public function store(ConferenceRequest $request)
     {
-        Conference::create($request->validated());
+        $conferences = FakeData::conferences();
 
-        return redirect()->route('admin.conferences.index')
+        $newId = empty($conferences) ? 1 : (max(array_keys($conferences)) + 1);
+        $data = $request->validated();
+        $data['id'] = $newId;
+
+        $conferences[$newId] = $data;
+        session()->put('conferences', $conferences);
+
+        return redirect()
+            ->route('admin.conferences.index')
             ->with('success', __('app.flash.conference_created'));
     }
 
     public function edit(int $id)
     {
-        $conference = Conference::findOrFail($id);
+        $conferences = FakeData::conferences();
+        abort_if(!isset($conferences[$id]), 404);
 
-        return view('admin.conferences.edit', ['conference' => $this->toArrayConference($conference)]);
+        return view('admin.conferences.edit', [
+            'currentUser' => $this->currentUser(),
+            'conference' => $conferences[$id],
+        ]);
     }
 
     public function update(ConferenceRequest $request, int $id)
     {
-        $conference = Conference::findOrFail($id);
-        $conference->update($request->validated());
+        $conferences = FakeData::conferences();
+        abort_if(!isset($conferences[$id]), 404);
 
-        return redirect()->route('admin.conferences.index')
+        $data = $request->validated();
+        $data['id'] = $id;
+
+        $conferences[$id] = $data;
+        session()->put('conferences', $conferences);
+
+        return redirect()
+            ->route('admin.conferences.index')
             ->with('success', __('app.flash.conference_updated'));
     }
 
     public function destroy(int $id)
     {
-        $conference = Conference::findOrFail($id);
+        $conferences = FakeData::conferences();
+        abort_if(!isset($conferences[$id]), 404);
 
-        if (Carbon::parse($conference->date)->isPast()) {
-            return redirect()->route('admin.conferences.index')
-                ->with('error', __('app.flash.conference_delete_blocked'));
+        $isPast = Carbon::parse($conferences[$id]['date'])->lessThan(Carbon::today());
+        if ($isPast) {
+            return redirect()
+                ->route('admin.conferences.index')
+                ->with('error', __('app.flash.cannot_delete_past'));
         }
 
-        $conference->delete();
+        unset($conferences[$id]);
+        session()->put('conferences', $conferences);
 
-        return redirect()->route('admin.conferences.index')
+        return redirect()
+            ->route('admin.conferences.index')
             ->with('success', __('app.flash.conference_deleted'));
     }
 }

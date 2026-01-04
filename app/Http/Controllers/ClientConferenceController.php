@@ -2,68 +2,62 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Conference;
+use App\Services\FakeData;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 
 class ClientConferenceController extends Controller
 {
-    private function toArrayConference(Conference $c): array
+    private function currentUser(): array
     {
-        return [
-            'id' => $c->id,
-            'title' => $c->title,
-            'description' => $c->description,
-            'speakers' => $c->speakers,
-            'date' => optional($c->date)->toDateString() ?? (string) $c->date,
-            'time' => $c->time,
-            'address' => $c->address,
-        ];
+        return ['first_name' => 'Client', 'last_name' => 'User'];
     }
 
     public function index()
     {
-        $today = Carbon::today();
+        $conferences = FakeData::conferences();
 
-        $conferences = Conference::query()
-            ->whereDate('date', '>=', $today)
-            ->orderBy('date')
-            ->get()
-            ->map(fn (Conference $c) => $this->toArrayConference($c))
-            ->values()
-            ->all();
+        // Client sees only planned conferences
+        $today = Carbon::today();
+        $planned = array_filter($conferences, function ($c) use ($today) {
+            return Carbon::parse($c['date'])->greaterThanOrEqualTo($today);
+        });
 
         return view('client.conferences.index', [
-            'currentUser' => [
-                'first_name' => auth()->user()->first_name,
-                'last_name' => auth()->user()->last_name,
-            ],
-            'conferences' => $conferences,
+            'currentUser' => $this->currentUser(),
+            'conferences' => $planned,
         ]);
     }
 
     public function show(int $id)
     {
-        $conference = Conference::findOrFail($id);
+        $conferences = FakeData::conferences();
+        abort_if(!isset($conferences[$id]), 404);
 
         return view('client.conferences.show', [
-            'currentUser' => [
-                'first_name' => auth()->user()->first_name,
-                'last_name' => auth()->user()->last_name,
-            ],
-            'conference' => $this->toArrayConference($conference),
+            'currentUser' => $this->currentUser(),
+            'conference' => $conferences[$id],
         ]);
     }
 
     public function register(Request $request, int $id)
     {
-        $conference = Conference::findOrFail($id);
+        $conferences = FakeData::conferences();
+        abort_if(!isset($conferences[$id]), 404);
 
-        // Register logged-in client to conference (users_conferences)
-        $request->user()->conferences()->syncWithoutDetaching([$conference->id]);
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'email', 'max:255'],
+        ]);
+
+        $registrations = FakeData::registrations();
+        $registrations[$id] = $registrations[$id] ?? [];
+        $registrations[$id][] = $data;
+
+        session()->put('registrations', $registrations);
 
         return redirect()
-            ->route('client.conferences.show', $conference->id)
+            ->route('client.conferences.show', $id)
             ->with('success', __('app.flash.register_success'));
     }
 }
